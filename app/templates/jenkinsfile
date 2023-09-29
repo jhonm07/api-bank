@@ -1,0 +1,55 @@
+pipeline {
+    agent any
+    
+    stages {
+        stage('Clonar Repositorio') {
+            steps {
+                // Clonar el repositorio de GitHub
+                git 'https://github.com/tuusuario/turepositorio.git'
+            }
+        }
+        
+        stage('Ejecutar Pruebas Unitarias') {
+            steps {
+                // Puedes utilizar el framework de testing que desees aquí
+                // En este ejemplo, asumimos el uso de JUnit
+                sh 'mvn test' // o 'pytest' para Python, u otro comando apropiado
+            }
+        }
+        
+        stage('Análisis de Calidad del Código') {
+            steps {
+                // Puedes utilizar SonarQube o SonarCloud según tus necesidades
+                // Asumiendo el uso de SonarQube
+                withSonarQubeEnv('NombreDeTuInstalaciónSonarQube') {
+                    sh 'mvn sonar:sonar' // o el comando apropiado para tu proyecto
+                }
+            }
+        }
+    }
+    
+    post {
+        success {
+            // Puedes agregar acciones posteriores a un resultado exitoso
+            // Por ejemplo, notificar por correo electrónico
+            emailext (
+                to: 'tucorreo@example.com',
+                subject: 'Pipeline Exitoso',
+                body: 'El pipeline de CI se ejecutó con éxito.'
+            )
+        }
+        
+        failure {
+            // Puedes agregar acciones posteriores a un resultado fallido
+            // Por ejemplo, notificar por correo electrónico y registrar un error en JIRA
+            emailext (
+                to: 'tucorreo@example.com',
+                subject: 'Pipeline Fallido',
+                body: 'El pipeline de CI ha fallado. Por favor, revisa los registros.'
+            )
+            catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                // Código para registrar un error en JIRA
+            }
+        }
+    }
+}
