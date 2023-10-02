@@ -1,6 +1,5 @@
 from flask import Flask, render_template
 import datetime
-import werkzeug
 app = Flask(__name__)
 
 
