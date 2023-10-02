@@ -1,0 +1,64 @@
+pipeline {
+    agent any
+    
+    environment {
+        SONAR_TOKEN = credentials('jenkins-sonar') 
+        DOCKER_HUB_CREDENTIALS = credentials('jenkins-docker') 
+    }
+
+    stages {
+        stage('Clonar Repositorio') {
+            steps {
+                
+                sh 'git clone https://github.com/jhonm07/api-bank.git'
+                echo 'repositorio clonado exitosamente'
+            }
+        }
+
+       stage('Ejecutar Pruebas Unitarias') {
+            steps {
+             
+                sh 'pip install -r /var/jenkins_home/workspace/app-banck/api-bank/app/requirements.txt' 
+                sh 'pytest /var/jenkins_home/workspace/app-banck/api-bank/app/test_app.py' 
+                echo 'pruebas ejecutadas exitosamente'
+                
+            }
+        }
+
+        stage('Analizar Calidad del Código') {
+            steps {
+               withSonarQubeEnv('SonarCloud') {
+                    sh 'sonar-scanner -Dsonar.login=$SONAR_TOKEN'
+                echo 'pruebas de codigo ejecutadas exitosamente'
+                    
+                }
+            }
+        }
+
+        stage('Construir y Subir Imagen Docker') {
+            steps {
+                script {
+                    
+                    def image = docker.build("app-ban:${env.BUILD_NUMBER}")
+
+                    
+                    docker.withRegistry('https://registry.hub.docker.com', 'jenkins-docker') {
+                       
+                        image.push()
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        failure {
+            
+            echo 'El pipeline ha fallado. Realiza acciones de recuperación aquí si es necesario.'
+        }
+        success {
+            
+            echo 'El pipeline se ejecutó con éxito. Puedes realizar acciones adicionales aquí.'
+        }
+    }
+}
